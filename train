@@ -1,4 +1,4 @@
 rm -rf nohup.out
 
-nohup python 02_train.py ./ &
+nohup python $1 ./ &
 

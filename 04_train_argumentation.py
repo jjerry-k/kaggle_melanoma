@@ -5,21 +5,26 @@ import pandas as pd
 import tensorflow as tf
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
+from tensorflow.keras import layers, models, losses, optimizers, callbacks
+from tensorflow.keras.applications import Xception
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 import wandb
 from wandb.keras import WandbCallback
 print("Package Loaded!")
 # %%
+# For Efficiency
 gpus = tf.config.experimental.list_physical_devices('GPU')
-
 if gpus:
     try:
-        tf.config.experimental.set_memory_growth(gpus[0], True)
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
     except RuntimeError as e:
         print(e)
-
 # %%
-ROOT = './data'
+ROOT = '/data/jerry/private/data'
 
 TR_CSV_PATH = os.path.join(ROOT, "new_train.csv")
 TE_CSV_PATH = os.path.join(ROOT, "new_test.csv")
@@ -28,7 +33,7 @@ TR_IMG_PATH = os.path.join(ROOT, 'jpeg', 'train')
 TE_IMG_PATH = os.path.join(ROOT, 'jpeg', 'test')
 
 SIZE = 224
-BATCH_SIZE = 128
+BATCH_SIZE = 1024
 SEED = 777
 EPOCHS=10
 
@@ -49,17 +54,15 @@ te_csv = pd.read_csv(TE_CSV_PATH)
 print(te_csv.head(5))
 
 # %%
-from tensorflow.keras import layers, models, losses, optimizers, callbacks
-from tensorflow.keras.applications import Xception
-base_model = Xception(weights="imagenet", include_top=False, pooling='avg')
-base_model.summary()
 
-out = layers.Dense(1, activation="sigmoid")(base_model.output)
-
-# %%
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-train_image_generator = ImageDataGenerator(rescale=1./255, ) # Generator for our training data
+train_image_generator = ImageDataGenerator(rescale=1./255, 
+                                            rotation_range=180, 
+                                            width_shift_range = [-0.1, 0.1], 
+                                            height_shift_range = [-0.1, 0.1], 
+                                            shear_range = 0.1, 
+                                            zoom_range = 0.25, 
+                                            horizontal_flip = True, 
+                                            vertical_flip = True) # Generator for our training data
 val_image_generator = ImageDataGenerator(rescale=1./255)
 test_image_generator = ImageDataGenerator(rescale=1./255) # Generator for our validation data
 
@@ -84,14 +87,21 @@ earlystop = callbacks.EarlyStopping(monitor='val_loss', patience=7, restore_best
 wandb_callback = WandbCallback(input_type='image', labels=[0,1], save_weights_only=True)
 
 # %%
-model = models.Model(base_model.input, out)
-model.compile(loss = 'binary_crossentropy', optimizer='adam', metrics=['acc'])
+strategy = tf.distribute.MirroredStrategy()
+with strategy.scope():
+    base_model = Xception(weights="imagenet", include_top=False, pooling='avg')
+    base_model.summary()
+
+    out = layers.Dense(1, activation="sigmoid")(base_model.output)
+    model = models.Model(base_model.input, out)
+    model.compile(loss = 'binary_crossentropy', optimizer='adam', metrics=['acc'])
 # %%
 model.fit(train_generator, \
             epochs=EPOCHS, \
             validation_data=val_generator, \
             callbacks = [reducelr, earlystop, wandb_callback], \
-            workers=4)
+            workers=24,
+            max_queue_size=32)
 
 # %%
 # %%

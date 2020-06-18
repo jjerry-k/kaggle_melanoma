@@ -2,4 +2,5 @@ data
 wandb
 submissions
 *.csv
+nohup.out
 .vscode
