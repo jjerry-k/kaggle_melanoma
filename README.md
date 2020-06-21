@@ -1,4 +1,7 @@
-# kaggle_melanoma
+# Kaggle
+
+## SIIM-ISIC Melanoma Classification
+
 ---
 
 - 1st: 0.442 (Xception)
