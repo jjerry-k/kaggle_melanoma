@@ -4,4 +4,5 @@
 - 1st: 0.442 (Xception)
 - 2nd: 0.450 (Xception + Augmentation)
 - 3rd: 0.494 (MobileNetV2 + Augmentation)
-- 4rd:
+- 4rd: 0.512 (ResNet50V2 + Augmentation)
+- 5th: 0.495 (EfficientNetB7 + Augmentation)

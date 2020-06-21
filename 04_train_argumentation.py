@@ -9,6 +9,8 @@ from tensorflow.keras import layers, models, losses, optimizers, callbacks
 from tensorflow.keras.applications import VGG16, VGG19, ResNet50, ResNet101, ResNet152, InceptionV3
 from tensorflow.keras.applications import Xception, MobileNet, MobileNetV2, ResNet50V2, ResNet101V2, ResNet152V2
 from tensorflow.keras.applications import InceptionResNetV2, DenseNet121, DenseNet169, DenseNet201
+from tensorflow.keras.applications import EfficientNetB0, EfficientNetB1, EfficientNetB2, EfficientNetB3
+from tensorflow.keras.applications import EfficientNetB4, EfficientNetB5, EfficientNetB6, EfficientNetB7
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 import wandb
@@ -41,7 +43,16 @@ MODEL_LIST = {
     "inceptionresnetv2": InceptionResNetV2, 
     'densenet121': DenseNet121, 
     'densenet169': DenseNet169, 
-    'densenet201': DenseNet201}
+    'densenet201': DenseNet201,
+    'efficientnetb0': EfficientNetB0,
+    'efficientnetb1': EfficientNetB1,
+    'efficientnetb2': EfficientNetB2,
+    'efficientnetb3': EfficientNetB3,
+    'efficientnetb4': EfficientNetB4,
+    'efficientnetb5': EfficientNetB5,
+    'efficientnetb6': EfficientNetB6,
+    'efficientnetb7': EfficientNetB7,
+    }
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gpu_number", type=str, help="GPU number to use")
@@ -128,7 +139,7 @@ test_generator = test_image_generator.flow_from_dataframe(te_csv, directory=TE_I
                                                                 batch_size=BATCH_SIZE, seed=SEED)
 
 reducelr = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.95, patience=4, verbose=1)
-earlystop = callbacks.EarlyStopping(monitor='val_loss', patience=7, restore_best_weights=True)
+earlystop = callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 wandb_callback = WandbCallback(input_type='image', labels=[0,1], save_weights_only=True)
 
 # %%
@@ -140,10 +151,11 @@ with strategy.scope():
         base_model.trainable = False
     else:
         base_model.trainable = True
-
-    out = layers.Dense(1, activation="sigmoid")(base_model.output)
+    out = layers.Dropout(0.5)(base_model.output)
+    out = layers.Dense(1, activation="sigmoid")(out)
     model = models.Model(base_model.input, out)
     model.compile(loss = 'binary_crossentropy', optimizer=optimizers.SGD(learning_rate=0.001, momentum=0.99), metrics=['acc'])
+print("Build Network !")
 # %%
 model.fit(train_generator, \
             epochs=EPOCHS, \
