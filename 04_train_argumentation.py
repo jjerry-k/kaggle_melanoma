@@ -6,6 +6,7 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers, models, losses, optimizers, callbacks
+from tensorflow.keras import backend as K
 from tensorflow.keras.applications import VGG16, VGG19, ResNet50, ResNet101, ResNet152, InceptionV3
 from tensorflow.keras.applications import Xception, MobileNet, MobileNetV2, ResNet50V2, ResNet101V2, ResNet152V2
 from tensorflow.keras.applications import InceptionResNetV2, DenseNet121, DenseNet169, DenseNet201
@@ -89,7 +90,7 @@ TE_CSV_PATH = os.path.join(ROOT, "new_test.csv")
 TR_IMG_PATH = os.path.join(ROOT, 'jpeg', 'train')
 TE_IMG_PATH = os.path.join(ROOT, 'jpeg', 'test')
 
-SIZE = 224
+SIZE = 448
 BATCH_SIZE = 1024
 SEED = 777
 
@@ -139,8 +140,25 @@ test_generator = test_image_generator.flow_from_dataframe(te_csv, directory=TE_I
                                                                 batch_size=BATCH_SIZE, seed=SEED)
 
 reducelr = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.95, patience=4, verbose=1)
-earlystop = callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+earlystop = callbacks.EarlyStopping(monitor='val_loss', patience=4, restore_best_weights=True)
 wandb_callback = WandbCallback(input_type='image', labels=[0,1], save_weights_only=True)
+
+def focal_loss(alpha=0.25,gamma=2.0):
+    def focal_crossentropy(y_true, y_pred):
+        bce = K.binary_crossentropy(y_true, y_pred)
+        
+        y_pred = K.clip(y_pred, K.epsilon(), 1.- K.epsilon())
+        p_t = (y_true*y_pred) + ((1-y_true)*(1-y_pred))
+        
+        alpha_factor = 1
+        modulating_factor = 1
+
+        alpha_factor = y_true*alpha + ((1-alpha)*(1-y_true))
+        modulating_factor = K.pow((1-p_t), gamma)
+
+        # compute the final loss and return
+        return K.mean(alpha_factor*modulating_factor*bce, axis=-1)
+    return focal_crossentropy
 
 # %%
 strategy = tf.distribute.MirroredStrategy()
@@ -154,7 +172,7 @@ with strategy.scope():
     out = layers.Dropout(0.5)(base_model.output)
     out = layers.Dense(1, activation="sigmoid")(out)
     model = models.Model(base_model.input, out)
-    model.compile(loss = 'binary_crossentropy', optimizer=optimizers.SGD(learning_rate=0.001, momentum=0.99), metrics=['acc'])
+    model.compile(loss = focal_loss(), optimizer=optimizers.SGD(learning_rate=0.001, momentum=0.99), metrics=[tf.keras.metrics.AUC()])
 print("Build Network !")
 # %%
 model.fit(train_generator, \

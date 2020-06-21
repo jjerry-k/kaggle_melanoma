@@ -6,3 +6,5 @@
 - 3rd: 0.494 (MobileNetV2 + Augmentation)
 - 4rd: 0.512 (ResNet50V2 + Augmentation)
 - 5th: 0.495 (EfficientNetB7 + Augmentation)
+- 6th: 0.537 (EfficientNetB0 + Augmentation)
+- 7th: 0.523 (EfficientNetB1 + Augmentation)
