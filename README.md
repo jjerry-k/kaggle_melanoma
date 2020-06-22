@@ -11,3 +11,5 @@
 - 5th: 0.495 (EfficientNetB7 + Augmentation)
 - 6th: 0.537 (EfficientNetB0 + Augmentation)
 - 7th: 0.523 (EfficientNetB1 + Augmentation)
+- 8th: 0.478 (EfficientNetB2 + Augmentation)
+- 9th: 0.532 (EfficientnetB0 + Augmentation + focal loss)

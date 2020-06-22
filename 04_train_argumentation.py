@@ -90,7 +90,7 @@ TE_CSV_PATH = os.path.join(ROOT, "new_test.csv")
 TR_IMG_PATH = os.path.join(ROOT, 'jpeg', 'train')
 TE_IMG_PATH = os.path.join(ROOT, 'jpeg', 'test')
 
-SIZE = 448
+SIZE = 224
 BATCH_SIZE = 1024
 SEED = 777
 
