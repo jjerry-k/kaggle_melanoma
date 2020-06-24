@@ -104,6 +104,12 @@ wandb.init(project="kaggle_melanoma", name=f"{date}_{MODEL}_{FREEZE}")
 tr_csv = pd.read_csv(TR_CSV_PATH)
 tr_csv['target']= tr_csv['target'].astype("str")
 tr_csv, val_csv = train_test_split(tr_csv, test_size = 0.05, random_state=SEED, shuffle=True)
+
+df_1=tr_csv[tr_csv['target']=='1']
+df_0=tr_csv[tr_csv['target']=='0'].sample(len(df_1))
+tr_csv=pd.concat([df_0, df_1])
+tr_csv=tr_csv.reset_index()
+
 print(tr_csv.head(5))
 print(val_csv.head(5))
 
@@ -172,7 +178,7 @@ with strategy.scope():
     out = layers.Dropout(0.5)(base_model.output)
     out = layers.Dense(1, activation="sigmoid")(out)
     model = models.Model(base_model.input, out)
-    model.compile(loss = focal_loss(), optimizer=optimizers.SGD(learning_rate=0.001, momentum=0.99), metrics=[tf.keras.metrics.AUC()])
+    model.compile(loss = focal_loss(), optimizer=optimizers.Adam(learning_rate=0.0001), metrics=[tf.keras.metrics.AUC()])
 print("Build Network !")
 # %%
 model.fit(train_generator, \
